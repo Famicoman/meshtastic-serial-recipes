@@ -37,7 +37,6 @@ HardwareSerial MAXUART(2);
 
 #define FEED_LINES_BEFORE_CUT 5      // ESC d feed after the text
 #define EXTRA_LFS_AFTER_MSG   3      // plain LFs sent right after the message
-#define PREAMBLE_NULS         16     // sacrificial bytes, sent back-to-back with the message
 #define IDLE_FLUSH_MS         1000   // flush a message with no LF after this much silence
 
 String xiaoMessage = "";
@@ -56,11 +55,6 @@ unsigned long messageTime = 0;
 void printMessage(const String &msg)
 {
     // Everything below goes out as one continuous burst, with no delays
-
-    // Sacrificial preamble absorbs the corrupted start of the transmission
-    for (int i = 0; i < PREAMBLE_NULS; i++)
-        MAXUART.write((uint8_t)0x00);
-    MAXUART.write(0x0A);                 // any junk prints on its own line
 
     // Message + LF prints immediately
     MAXUART.print(msg);
