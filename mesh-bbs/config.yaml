@@ -1,0 +1,56 @@
+# MeshBBS configuration.
+# Any key left out here falls back to the built-in default in config.py,
+# so you only need to list what you're actually changing.
+
+modem:
+  port: /dev/modem       # from 99-meshbbs.rules; use /dev/ttyUSB0 etc. if not using that
+  idle_baud: 19200        # local Pi<->modem link speed while idle/in command mode
+  connect_baud: 300       # local Pi<->modem link speed once actually CONNECTed —
+                           # must match what the modem's &B0 "variable DTE rate"
+                           # switches to; see the comment on Modem._set_baud in
+                           # modem_bbs.py if you ever need to support other speeds
+
+  # Sent to the modem on startup and after every hangup. This particular
+  # sequence is tuned for one known 300-baud Bell-103 caller — if you ever
+  # need to also support faster or CCITT-standard (V.21/V.22) callers,
+  # this is the first place to revisit.
+  init_strings:
+    - "ATZ"        # reset to defaults
+    - "ATE0"       # local echo off (we do our own echoing over the line)
+    - "ATS0=1"     # auto-answer after 1 ring
+    - "AT&C1&D2"   # normal carrier-detect / DTR behavior
+    - "AT&N1"      # require 300 bps connection (not just prefer it) — the far
+                    # end is 300-baud-only; without this the modem's auto
+                    # negotiation cascade was failing before reaching Bell 103
+    - "AT&U0"      # disable automatic speed fallback, so &N1 above is actually
+                    # enforced rather than treated as a ceiling/hint
+    - "ATB1"       # explicitly select Bell 103/212 mode (should be default,
+                    # but cheap to be explicit given B0/B1 controls modulation
+                    # for exactly the 300/1200 bps range we care about here)
+    - "AT&B0"      # explicitly keep the modem's default "variable DTE rate":
+                    # its local Pi<->modem serial rate tracks the actual
+                    # connect speed while online. We track that same change
+                    # on the pyserial side (see CONNECT_BAUD / Modem._set_baud
+                    # in modem_bbs.py) rather than locking the rate and
+                    # relying on hardware flow control, which proved
+                    # unreliable through this particular USB-serial adapter.
+    - "AT&K0"      # no flow control needed — the local rate now tracks the
+                    # line rate directly (see &B0 above), so there's no
+                    # speed mismatch for flow control to paper over.
+
+radio:
+  backend: meshtastic     # "meshtastic" or "meshcore"
+  port: /dev/meshradio    # from 99-meshbbs.rules; use /dev/ttyUSB1 etc. if not using that
+  baud: 115200             # only used by the meshcore backend
+  channel_idx: 0           # only used by the meshcore backend (broadcast channel)
+  db_path: /root/meshbbs/messages.db
+  send_timeout: 15         # seconds to wait for a mesh send before giving up,
+                           # so an unresponsive radio can't freeze a call session
+
+bbs:
+  term_width: 40           # wrap all outgoing text to this column width
+  banner_title: "=== MeshBBS - phillymesh.net ==="
+  banner_subtitle: "Messages traveling over LoRa mesh radio."
+
+logging:
+  log_file: /root/meshbbs/bbs.log

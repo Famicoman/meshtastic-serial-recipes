@@ -1,0 +1,13 @@
+[Unit]
+Description=MeshBBS Dial-Up BBS
+After=network.target
+
+[Service]
+ExecStart=/root/meshbbs/venv/bin/python3 /root/meshbbs/modem_bbs.py
+WorkingDirectory=/root/meshbbs
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

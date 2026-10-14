@@ -1,0 +1,18 @@
+# Pins the modem and mesh radio to fixed /dev names, regardless of which
+# USB port they're plugged into or what order they enumerate in.
+#
+# Install:
+#   sudo cp 99-meshbbs.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+#   sudo udevadm trigger
+# Then unplug/replug both devices (or reboot) and confirm:
+#   ls -l /dev/modem /dev/meshradio
+#
+# Vendor IDs used here:
+#   067b = Prolific Technology (RS-232-to-USB adapter -> the modem)
+#   10c4 = Silicon Labs (CP210x USB-UART bridge -> the mesh radio)
+# If you swap which device is which, or add a second device from the same
+# vendor, match on ATTRS{idProduct} too (from `lsusb`) to disambiguate.
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", SYMLINK+="modem"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", SYMLINK+="meshradio"
