@@ -152,7 +152,7 @@ class Modem:
             line = self._readline()
             if not line:
                 continue
-            logging.info("Modem: %s", line)
+            logging.info("Modem: %r", line)
             if line.startswith("CONNECT"):
                 self._set_baud(CONNECT_BAUD)
                 # Let the link settle, then throw away anything that piled
@@ -176,15 +176,30 @@ class Modem:
             # skip the +++ escape and just let it finish its NO CARRIER.
             time.sleep(1)
         else:
-            time.sleep(1)
-            self._write("+++")   # escape sequence back to command mode
-            time.sleep(1)
+            # Hayes escape: silence, "+++" with NO trailing CR (that's why
+            # this can't go through _write(), which appends one), then
+            # silence again. Guard time is S12 (default ~1s).
+            time.sleep(1.2)
+            self.ser.write(b"+++")
+            time.sleep(1.2)
             self._write("ATH0")  # on-hook
             time.sleep(0.5)
+            # Backstop: with &D2 set, dropping DTR also forces a hangup and
+            # a return to command mode, independent of the escape sequence.
+            self._pulse_dtr()
         self._set_baud(self.idle_baud)  # modem's own rate has now reverted
                                          # too, back to command-mode speed
         self.ser.reset_input_buffer()
         self._send_init()
+
+    def _pulse_dtr(self):
+        try:
+            self.ser.dtr = False
+            time.sleep(0.7)
+            self.ser.dtr = True
+            time.sleep(0.5)
+        except (OSError, serial.SerialException) as e:
+            logging.warning("Could not toggle DTR (%s); relying on +++/ATH0", e)
 
     def send_text(self, text):
         # Never write session text into a modem that's already hung up —
@@ -380,7 +395,8 @@ def main():
             result = modem.wait_for_connect()
             if result is None:
                 continue
-            logging.info("Call connected: %s", result)
+            logging.info("Call connected: %s (serial rate now %s)",
+                         result, modem.ser.baudrate)
             carrier_lost = False
             try:
                 run_session(modem, mesh)
