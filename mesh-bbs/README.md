@@ -134,6 +134,9 @@ hardware:
 - `bbs.term_width` — column width all output is word-wrapped to (default
   40, for classic 40-column terminals); `bbs.banner_title` /
   `banner_subtitle` — what the caller sees on connect
+- `bbs.idle_timeout` — seconds without a keystroke before the BBS hangs
+  up on a silent caller (0 disables); `bbs.max_bad_entries` — consecutive
+  unrecognized menu keys before it hangs up on line noise
 - `logging.log_file`
 
 Any key you leave out falls back to the built-in default in `config.py`,
@@ -191,6 +194,14 @@ journalctl -u meshbbs.service -f
   `messages.db` — this is what lets a caller see message history from
   *before* they dialed in, since neither mesh protocol retains that on
   its own.
+- **Hangup detection:** a caller whose terminal is powered off or whose
+  line drops shouldn't leave the BBS typing into a dead connection. After
+  each `CONNECT` it checks whether the modem's carrier-detect line is
+  readable through the USB adapter (logged as "Carrier-detect line usable
+  ..."); if so, a dropped carrier ends the session immediately. As a
+  fallback that needs no hardware support, it also watches for the
+  modem's `NO CARRIER` text, and the idle timeout and bad-entry limit
+  above end sessions where the carrier never drops.
 - The menu is intentionally plain ASCII with no cursor positioning or
   color — at 1200 baud you have roughly 150 bytes/second, so keeping
   screens short matters more than it would on a modern connection.

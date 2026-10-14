@@ -43,6 +43,8 @@ _DEFAULTS = {
         "term_width": 40,
         "banner_title": "=== MeshBBS - phillymesh.net ===",
         "banner_subtitle": "Messages traveling over LoRa mesh radio.",
+        "idle_timeout": 180,
+        "max_bad_entries": 10,
     },
     "logging": {
         "log_file": "/root/meshbbs/bbs.log",
